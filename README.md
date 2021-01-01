@@ -1,1 +1,1 @@
-# people-analytics
+These are my practice exercises for topics related to people analytics.
