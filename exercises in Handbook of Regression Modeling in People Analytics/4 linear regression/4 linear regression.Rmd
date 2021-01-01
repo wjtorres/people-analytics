@@ -1,0 +1,206 @@
+---
+title: "4 linear regression"
+author: "wjtorres"
+date: "1/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reference - Handbook of Regression Modeling in People Analytics
+
+Here I practice the code and exercises from the book [*Handbook of Regression Modeling in People Analytics*](http://peopleanalytics-regression-book.org/index.html) by Keith McNulty.
+
+
+```{r 4.1.3 walkthrough example}
+
+# upload data
+url <- "http://peopleanalytics-regression-book.org/data/ugtests.csv"
+ugtests <- read.csv(url)
+
+# look at the first few rows of data
+head(ugtests)
+
+# view structure
+str(ugtests)
+
+# view statistical summary
+summary(ugtests)
+
+library(ggplot2)
+library(GGally)
+
+# display a pair plot of all four columns of data
+GGally::ggpairs(ugtests)
+```
+
+```{r 4.2 simple linear regression}
+
+(d <- head(ugtests[ , c("Yr3", "Final")], 10))
+
+# simple plot
+plot(d$Yr3, d$Final, main = "Scatter plot of ten datapoints")
+# or 
+plot(d)
+
+# simple plot with a guess of line that could fit the data
+plot(d)
+abline(a = 1.2, b = 5, col = "blue")
+
+plot(d)
+abline(v=120, col="blue")
+
+plot(d)
+abline(0,1)
+
+# or can plot using ggplot2
+ggplot2::ggplot(data = d, aes(x = Yr3, y = Final)) + 
+  ggplot2::geom_point() +
+  ggplot2::geom_function(fun = function(x) {1.2*x + 5}, colour = "red", linetype = "dashed") +
+  ggplot2::annotate("text", x = 140, y = 160, label = "y = 1.2x + 5", colour = "red")
+
+## calculate model
+model <- lm(formula = Final ~ Yr3, data = d)
+
+names(model)
+
+model$coefficients
+
+summary(model)
+```
+
+```{r 4.3 multiple regression}
+
+model <- lm(data = ugtests, formula = Final ~ Yr3 + Yr2 + Yr1)
+
+model$coefficients
+
+summary(model)
+
+model_summary <- summary(model)
+
+model_summary$coefficients
+
+# 95% confidence intervals
+confint(model)
+
+# new model, having removed Yr1
+newmodel <- lm(data = ugtests, formula = Final ~ Yr3 + Yr2)
+
+names(newmodel)
+
+## get summary of model
+newmodel_summary <- summary(newmodel)
+
+## see summary contents
+names(newmodel_summary)
+
+## view r-squared
+newmodel_summary$r.squared
+
+## see full model summary
+newmodel_summary
+
+# making predictions
+
+(new_students <- data.frame(
+  Yr2 = c(67, 23, 88), 
+  Yr3 = c(144, 100, 166)
+))
+
+## use newmodel to predict for new_students
+predict(newmodel, new_students)
+
+## get a confidence interval 
+predict(newmodel, new_students, interval = "confidence")
+
+```
+
+```{r 4.4 Managing inputs in linear regression}
+
+(vehicle_data <- data.frame(
+  make = c("Ford", "Toyota", "Audi"), 
+  manufacturing_cost = c(15000, 19000, 28000)
+))
+
+library(dummies)
+(dummy_vehicle <- dummies::dummy("make", data = vehicle_data))
+
+(vehicle_data_dummies <- cbind(
+  manufacturing_cost = vehicle_data$manufacturing_cost,
+  dummy_vehicle
+))
+
+```
+
+```{r  Testing your model assumptions}
+
+# 4.5.1 Assumption of linearity and additivity
+
+predicted_values <- newmodel$fitted.values
+true_values <- ugtests$Final
+
+# plot true values against predicted values
+plot(predicted_values, true_values)
+
+
+
+residuals <- newmodel$residuals
+
+# plot residuals against predicted values
+plot(predicted_values, residuals)
+
+
+
+
+Yr2 <- ugtests$Yr2
+
+# plot residuals against Yr2 values
+plot(Yr2, residuals)
+
+
+
+Yr3 <- ugtests$Yr3
+
+# plot residuals against Yr3 values
+plot(Yr3, residuals)
+
+
+
+## normal distribution qqplot of residuals
+qqnorm(newmodel$residuals)
+
+
+
+
+library(mctest)
+
+# diagnose possible overall presence of multicollinearity
+mctest::omcdiag(newmodel)
+
+# if necessary, diagnose specific multicollinear variables using VIF 
+mctest::imcdiag(newmodel, method = "VIF")
+```
+
+```{r 4.6 Extending multiple linear regression}
+interaction_model <- lm(data = ugtests, 
+                        formula = Final ~ Yr2 + Yr3 + Yr2*Yr3)
+summary(interaction_model)
+
+# data frame with a declining and an improving observation
+obs <- data.frame(
+  Yr2 = c(150, 75),
+  Yr3 = c(75, 150)
+)
+
+predict(interaction_model, obs)
+
+
+
+quadratic_yr1_model <- lm(data = ugtests, 
+                          formula = Final ~ Yr3 + Yr2 + Yr1 + I(Yr1^2))
+summary(quadratic_yr1_model)
+```
+
